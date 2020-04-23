@@ -1,0 +1,2 @@
+export PMP_HOSTNAME=pmp.example.com
+export PMP_TOKEN=XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXX
