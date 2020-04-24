@@ -190,6 +190,13 @@ class PasswordManagerProClient(object):
             data["operation"]["Details"]["serial_number"] = serial_number
         return self._get("getCertificate", pki_api=True, raw=True, jdata=data)
 
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getcertkeystore
+    def get_certificate_keystore(self, common_name, serial_number=None):
+        data = {"operation": {"Details": {"common_name": common_name}}}
+        if serial_number:
+            data["operation"]["Details"]["serial_number"] = serial_number
+        return self._get("getCertificateKeyStore", pki_api=True, raw=True, jdata=data)
+
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getcertdetail
     def get_certificate_details(self, common_name):
         data = {"operation": {"Details": {"common_name": common_name}}}
