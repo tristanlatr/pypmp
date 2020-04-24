@@ -317,6 +317,10 @@ class PasswordManagerProClient(object):
         res = self._post("exportSSHKey", pki_api=True)
         return res
 
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getlist
+    def get_password_requests(self):
+        return self._get("accounts/passwordaccessrequests")
+
     # Shortcuts
     def get_resource_by_name(self, name):
         for res in self.get_resources():
