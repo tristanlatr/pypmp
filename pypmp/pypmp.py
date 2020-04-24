@@ -11,47 +11,94 @@ LOGGER = logging.getLogger(__name__)
 
 
 class PasswordManagerProClient(object):
-    def __init__(self, hostname, token, port=443, verify=True):
+    def __init__(self, hostname, token, port=443, verify=True, debug=False):
         self.token = token
         self.verify = verify
+        self.debug = debug
         self._API_URL = f"https://{hostname}:{port}/restapi/json/v1"
+        self._PKI_API_URL = f"https://{hostname}:{port}/api/pki/restapi"
 
-    def _request(self, method, endpoint, params=None, jdata=None):
-        if jdata:
-            if not params:
-                params = {}
-            params["INPUT_DATA"] = json.dumps(jdata)
+        if self.debug:
+            LOGGER.setLevel(logging.DEBUG)
+
+    def _pki_request(self, method, endpoint, params=None, jdata=None):
+        res = requests.request(
+            method=method,
+            url=f"{self._PKI_API_URL}/{endpoint}",
+            headers={"AUTHTOKEN": self.token, "Content-Type": "text/json"},
+            data={"INPUT_DATA": json.dumps(jdata)} if jdata else None,
+            params=params,
+            verify=self.verify,
+        )
+        LOGGER.debug(f"RAW Response: {res.text}")
+        res.raise_for_status()
+        jres = res.json()
+        return jres
+
+    def _rest_request(self, method, endpoint, params=None, jdata=None):
+        # Special acrobatics for GET since data is unsupported here
+        # Used by generate_password
+        if method == "get" and jdata:
+            params = {"INPUT_DATA": json.dumps(jdata)}
+            jdata = None
+
         res = requests.request(
             method=method,
             url=f"{self._API_URL}/{endpoint}",
             headers={"AUTHTOKEN": self.token, "Content-Type": "text/json"},
+            data={"INPUT_DATA": json.dumps(jdata)} if jdata else None,
             params=params,
             verify=self.verify,
         )
+        LOGGER.debug(f"RAW Response: {res.text}")
         res.raise_for_status()
         jres = res.json()
-        print(f'{jres["operation"]["result"]}')
-        LOGGER.info(f'{jres["operation"]["result"]}')
+        LOGGER.info(f'Result: {jres["operation"]["result"]}')
         if jres["operation"]["result"]["status"] != "Success":
             LOGGER.warning(
                 f'Request to {res.url} failed: {jres["operation"]["result"]["message"]}'
             )
-        return jres["operation"].get("Details")
+        return jres.get("operation", {}).get("Details")
 
-    def _get(self, endpoint, params=None, jdata=None):
-        return self._request(
-            method="get", endpoint=endpoint, params=params, jdata=jdata
-        )
+    def _get(self, endpoint, params=None, jdata=None, pki_api=False):
+        if pki_api:
+            return self._pki_request(
+                method="get", endpoint=endpoint, params=params, jdata=jdata
+            )
+        else:
+            return self._rest_request(
+                method="get", endpoint=endpoint, params=params, jdata=jdata
+            )
 
-    def _post(self, endpoint, params=None, jdata=None):
-        return self._request(
-            method="post", endpoint=endpoint, params=params, jdata=jdata
-        )
+    def _post(self, endpoint, params=None, jdata=None, pki_api=False):
+        if pki_api:
+            return self._pki_request(
+                method="post", endpoint=endpoint, params=params, jdata=jdata
+            )
+        else:
+            return self._rest_request(
+                method="post", endpoint=endpoint, params=params, jdata=jdata
+            )
 
-    def _put(self, endpoint, params=None, jdata=None):
-        return self._request(
-            method="put", endpoint=endpoint, params=params, jdata=jdata
-        )
+    def _put(self, endpoint, params=None, jdata=None, pki_api=False):
+        if pki_api:
+            return self._pki_request(
+                method="put", endpoint=endpoint, params=params, jdata=jdata
+            )
+        else:
+            return self._rest_request(
+                method="put", endpoint=endpoint, params=params, jdata=jdata
+            )
+
+    def _delete(self, endpoint, params=None, jdata=None, pki_api=False):
+        if pki_api:
+            return self._pki_request(
+                method="delete", endpoint=endpoint, params=params, jdata=jdata
+            )
+        else:
+            return self._rest_request(
+                method="delete", endpoint=endpoint, params=params, jdata=jdata
+            )
 
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getresource
     def get_resources(self):
@@ -81,6 +128,46 @@ class PasswordManagerProClient(object):
     def get_resource_id(self, resource_name):
         res = self._get(endpoint=f"resources/resourcename/{resource_name}")
         return res.get("RESOURCEID")
+
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#createresource
+    # Example custom_fields:
+    # {"ACCOUNTCUSTOMFIELD": [
+    #     {"CUSTOMLABEL": "Secure Account", "CUSTOMVALUE": "YES"}
+    # ]}
+    def create_resource(
+        self,
+        resource_name,
+        account_name,
+        password,
+        resource_type="",
+        notes="",
+        url="",
+        resource_password_policy="Strong",
+        account_password_policy="Strong",
+        custom_fields=None,
+    ):
+        data = {
+            "operation": {
+                "Details": {
+                    "RESOURCENAME": resource_name,
+                    "ACCOUNTNAME": account_name,
+                    "RESOURCETYPE": resource_type,
+                    "PASSWORD": password,
+                    "NOTES": notes,
+                    "RESOURCEURL": url,
+                    "RESOURCEPASSWORDPOLICY": resource_password_policy,
+                    "ACCOUNTPASSWORDPOLICY": account_password_policy,
+                }
+            }
+        }
+        # Add custom fields if set
+        if custom_fields:
+            data["operation"]["Details"].update(custom_fields)
+        return self._post("resources", jdata=data)
+
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#deletepmp
+    def delete_resource(self, resource_id):
+        return self._delete(f"resources/{resource_id}")
 
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#createuser
     def create_user(
@@ -124,14 +211,16 @@ class PasswordManagerProClient(object):
                 }
             }
         }
-        from pprint import pprint
-        pprint(data)
         return self._post("user", jdata=data)
+
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#deleteuser
+    def delete_user(self, user_id):
+        return self._delete(f"user/{user_id}")
 
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getID
     def get_user_id(self, username):
         res = self._get(endpoint="user/getUserId", params={"USERNAME": username})
-        return res.get("USERID")
+        return res.get("USERID") if res else None
 
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#unlockUser
     def unlock_user(self, username):
@@ -144,9 +233,12 @@ class PasswordManagerProClient(object):
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#generatepswd
     def generate_password(self, password_policy="Strong"):
         data = {"operation": {"Details": {"POLICY": password_policy}}}
-        # res = self._get("passwords/generate", params=data)
         res = self._get("passwords/generate", jdata=data)
-        return res.get("PASSWORD")
+        return res.get("PASSWORD") if res else None
+
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#fetchssh
+    def get_ssh_keys(self):
+        return self._get("getAllSSHKeys", pki_api=True)
 
     # Shortcuts
     def get_resource_by_name(self, name):
@@ -164,8 +256,13 @@ class PasswordManagerProClient(object):
                 return acc
 
     def get_password(self, resource_name, account_name):
-        resource = self.get_resource_by_name(resource_name)
-        account = self.get_account_by_name(resource_name, account_name)
-        return self.get_account_password(
-            resource.get("RESOURCE ID"), account.get("ACCOUNT ID")
-        )
+        res = self.get_account_and_resource_ids(resource_name, account_name)
+        return self.get_account_password(res.get("RESOURCEID"), res.get("ACCOUNTID"))
+
+    def delete_user_by_username(self, username):
+        user_id = self.get_user_id(username)
+        return self.delete_user(user_id)
+
+    def delete_resource_by_name(self, resource_name):
+        resource_id = self.get_resource_id(resource_name)
+        return self.delete_resource(resource_id)
