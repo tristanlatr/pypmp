@@ -197,6 +197,16 @@ class PasswordManagerProClient(object):
             data["operation"]["Details"]["serial_number"] = serial_number
         return self._get("getCertificateKeyStore", pki_api=True, raw=True, jdata=data)
 
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getcertpassphrase
+    def get_certificate_passphrase(self, common_name, serial_number):
+        data = {"operation": {"Details": {"common_name": common_name, "serial_number": serial_number}}}
+        # Get the raw JSON response and extract the actual password from jres["result"]["message"]
+        res = self._get("getCertificatePassphrase", pki_api=True, raw=True, jdata=data)
+        jres = json.loads(res)
+        msg = jres.get("result", {}).get("message", "")
+        if "Private key passphrase of certificate" in msg:
+            return msg.split(" ")[-1]
+
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getcertdetail
     def get_certificate_details(self, common_name):
         data = {"operation": {"Details": {"common_name": common_name}}}
