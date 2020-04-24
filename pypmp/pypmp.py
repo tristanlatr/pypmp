@@ -21,21 +21,30 @@ class PasswordManagerProClient(object):
         if self.debug:
             LOGGER.setLevel(logging.DEBUG)
 
-    def _pki_request(self, method, endpoint, params=None, jdata=None):
+    def _pki_request(self, method, endpoint, raw=False, params=None, jdata=None):
+        if not params:
+            params = {}
+        params["AUTHTOKEN"] = self.token
+        if jdata:
+            params.update({"INPUT_DATA": json.dumps(jdata)})
         res = requests.request(
             method=method,
             url=f"{self._PKI_API_URL}/{endpoint}",
-            headers={"AUTHTOKEN": self.token, "Content-Type": "text/json"},
-            data={"INPUT_DATA": json.dumps(jdata)} if jdata else None,
+            # data={"INPUT_DATA": json.dumps(jdata)} if jdata else None,
             params=params,
             verify=self.verify,
         )
-        LOGGER.debug(f"RAW Response: {res.text}")
+        LOGGER.debug(f"URL: {res.url}\nRAW Response: {res.text}")
         res.raise_for_status()
+        if raw:
+            return res.text
         jres = res.json()
+        LOGGER.info(f'Result: {jres["result"]}')
+        if jres["result"]["status"] != "Success":
+            LOGGER.warning(f'Request to {res.url} failed: {jres["result"]["message"]}')
         return jres
 
-    def _rest_request(self, method, endpoint, params=None, jdata=None):
+    def _rest_request(self, method, endpoint, raw=False, params=None, jdata=None):
         # Special acrobatics for GET since data is unsupported here
         # Used by generate_password
         if method == "get" and jdata:
@@ -60,44 +69,44 @@ class PasswordManagerProClient(object):
             )
         return jres.get("operation", {}).get("Details")
 
-    def _get(self, endpoint, params=None, jdata=None, pki_api=False):
+    def _get(self, endpoint, params=None, jdata=None, pki_api=False, raw=False):
         if pki_api:
             return self._pki_request(
-                method="get", endpoint=endpoint, params=params, jdata=jdata
+                method="get", endpoint=endpoint, params=params, jdata=jdata, raw=raw
             )
         else:
             return self._rest_request(
-                method="get", endpoint=endpoint, params=params, jdata=jdata
+                method="get", endpoint=endpoint, params=params, jdata=jdata, raw=raw
             )
 
-    def _post(self, endpoint, params=None, jdata=None, pki_api=False):
+    def _post(self, endpoint, params=None, jdata=None, pki_api=False, raw=False):
         if pki_api:
             return self._pki_request(
-                method="post", endpoint=endpoint, params=params, jdata=jdata
+                method="post", endpoint=endpoint, params=params, jdata=jdata, raw=raw
             )
         else:
             return self._rest_request(
-                method="post", endpoint=endpoint, params=params, jdata=jdata
+                method="post", endpoint=endpoint, params=params, jdata=jdata, raw=raw
             )
 
-    def _put(self, endpoint, params=None, jdata=None, pki_api=False):
+    def _put(self, endpoint, params=None, jdata=None, pki_api=False, raw=False):
         if pki_api:
             return self._pki_request(
-                method="put", endpoint=endpoint, params=params, jdata=jdata
+                method="put", endpoint=endpoint, params=params, jdata=jdata, raw=raw
             )
         else:
             return self._rest_request(
-                method="put", endpoint=endpoint, params=params, jdata=jdata
+                method="put", endpoint=endpoint, params=params, jdata=jdata, raw=raw
             )
 
-    def _delete(self, endpoint, params=None, jdata=None, pki_api=False):
+    def _delete(self, endpoint, params=None, jdata=None, pki_api=False, raw=False):
         if pki_api:
             return self._pki_request(
-                method="delete", endpoint=endpoint, params=params, jdata=jdata
+                method="delete", endpoint=endpoint, params=params, jdata=jdata, raw=raw
             )
         else:
             return self._rest_request(
-                method="delete", endpoint=endpoint, params=params, jdata=jdata
+                method="delete", endpoint=endpoint, params=params, jdata=jdata, raw=raw
             )
 
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getresource
@@ -169,6 +178,35 @@ class PasswordManagerProClient(object):
     def delete_resource(self, resource_id):
         return self._delete(f"resources/{resource_id}")
 
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#faausers
+    def get_associated_users(self):
+        return self._get("getAllAssociatedUsers", pki_api=True)
+
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getcert
+    def get_certificate(self, common_name, serial_number=None):
+        data = {"operation": {"Details": {"common_name": common_name}}}
+        if serial_number:
+            data["operation"]["Details"]["serial_number"] = serial_number
+        return self._get("getCertificate", pki_api=True, raw=True, jdata=data)
+
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getcertdetail
+    def get_certificate_details(self, common_name):
+        data = {"operation": {"Details": {"common_name": common_name}}}
+        res = self._get("getCertificateDetails", pki_api=True, jdata=data)
+        # We need to only return what's under the $cert_id key (eg. "1")
+        fres = [res[k] for k in set(res.keys()) - set(["name", "result"])]
+        return fres[0] if len(fres) == 1 else fres
+
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getallcert
+    def get_all_certificates(self):
+        res = self._get("getAllSSLCertificates", pki_api=True)
+        return res.get("SSLCertificates")
+
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#getallcertexpiry
+    def get_all_certificate_expiry(self):
+        res = self._get("getAllSSLCertificates", pki_api=True)
+        return res.get("SSLCertificates")
+
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#createuser
     def create_user(
         self,
@@ -238,7 +276,8 @@ class PasswordManagerProClient(object):
 
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#fetchssh
     def get_ssh_keys(self):
-        return self._get("getAllSSHKeys", pki_api=True)
+        res = self._get("getAllSSHKeys", pki_api=True)
+        return res.get("SSHKeys")
 
     # Shortcuts
     def get_resource_by_name(self, name):
