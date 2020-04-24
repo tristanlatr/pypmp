@@ -25,12 +25,13 @@ class PasswordManagerProClient(object):
         if not params:
             params = {}
         params["AUTHTOKEN"] = self.token
-        if jdata:
+        if method == "get" and jdata:
             params.update({"INPUT_DATA": json.dumps(jdata)})
+            jdata = None
         res = requests.request(
             method=method,
             url=f"{self._PKI_API_URL}/{endpoint}",
-            # data={"INPUT_DATA": json.dumps(jdata)} if jdata else None,
+            data={"INPUT_DATA": json.dumps(jdata)} if jdata else None,
             params=params,
             verify=self.verify,
         )
@@ -278,6 +279,22 @@ class PasswordManagerProClient(object):
     def get_ssh_keys(self):
         res = self._get("getAllSSHKeys", pki_api=True)
         return res.get("SSHKeys")
+
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#fpssh
+    # FIXME This API seems to be broken
+    def get_ssh_key(self, name):
+        data = {"operation": {"Details": {"keyName": name}}}
+        # FIXME The doc states POST ¯\_(ツ)_/¯
+        res = self._post("getSSHKey", pki_api=True)
+        return res
+
+    # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#exportssh
+    # FIXME This API seems to be broken
+    def export_ssh_key(self, name):
+        data = {"operation": {"Details": {"keyName": name}}}
+        # FIXME The doc states POST ¯\_(ツ)_/¯
+        res = self._post("exportSSHKey", pki_api=True)
+        return res
 
     # Shortcuts
     def get_resource_by_name(self, name):
