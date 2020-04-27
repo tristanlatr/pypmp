@@ -1,9 +1,10 @@
 import os
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
-from pypmp import PasswordManagerProClient
+from pypmp import PasswordManagerProClient, LOGGER
+LOGGER.setLevel(logging.DEBUG)
 
 pmp = PasswordManagerProClient(
     os.environ.get("PMP_HOSTNAME"),
