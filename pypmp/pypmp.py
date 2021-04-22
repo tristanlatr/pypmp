@@ -68,7 +68,7 @@ class PasswordManagerProClient(object):
             LOGGER.warning(
                 f'Request to {res.url} failed: {jres["operation"]["result"]["message"]}'
             )
-            # Always return 'None' on both of failed and succeed of resource creation 
+            # Always return 'None' on both of failed and succeed of resource creation
             return jres["operation"]["result"]["status"]
         return jres.get("operation", {}).get("Details")
 
@@ -157,10 +157,10 @@ class PasswordManagerProClient(object):
         resourcegroupname="default",
         resource_password_policy="Strong",
         account_password_policy="Strong",
-        ownername='admin',
-        dnsname='',
-        location='',
-        custom_fields=None
+        ownername="admin",
+        dnsname="",
+        location="",
+        custom_fields=None,
     ):
         data = {
             "operation": {
@@ -176,7 +176,7 @@ class PasswordManagerProClient(object):
                     "RESOURCEURL": url,
                     "DNSNAME": dnsname,
                     "LOCATION": location,
-                    "RESOURCEGROUPNAME": resourcegroupname
+                    "RESOURCEGROUPNAME": resourcegroupname,
                 }
             }
         }
@@ -361,13 +361,8 @@ class PasswordManagerProClient(object):
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#addaccounts
     # add account into existing resource
     def add_account(
-        self, 
-        username, 
-        password, 
-        resourceid,
-        accountpasswordpolicy="Strong", 
-        notes=""
-        ):
+        self, username, password, resourceid, accountpasswordpolicy="Strong", notes=""
+    ):
         data = {
             "operation": {
                 "Details": {
@@ -376,7 +371,7 @@ class PasswordManagerProClient(object):
                             "ACCOUNTNAME": username,
                             "PASSWORD": password,
                             "ACCOUNTPASSWORDPOLICY": accountpasswordpolicy,
-                            "NOTES": notes
+                            "NOTES": notes,
                         }
                     ]
                 }
