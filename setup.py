@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="pypmp",
-    version="0.2",
+    version="0.3",
     license="GPL3",
     description="Python lib to interact with ManageEngine Password Manager Pro's REST API",
     long_description=open("README.md").read(),
