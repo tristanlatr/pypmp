@@ -3,7 +3,7 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  flakehell:
+  flake8:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
