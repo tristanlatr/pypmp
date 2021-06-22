@@ -26,7 +26,7 @@ jobs:
 
       - name: Lint with flakehell
         run: |
-          flake8
+          poetry run flake8
 
   isort:
     runs-on: ubuntu-latest
@@ -46,7 +46,7 @@ jobs:
 
       - name: isort
         run: |
-          isort --check --diff --verbose
+          poetry run isort --check --diff --verbose
 
   black:
     runs-on: ubuntu-latest
@@ -66,4 +66,4 @@ jobs:
 
       - name: Black
         run: |
-          black --config pyproject.toml --check --diff --verbose
+          poetry run black --config pyproject.toml --check --diff --verbose
