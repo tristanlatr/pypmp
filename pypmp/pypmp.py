@@ -6,7 +6,6 @@ import logging
 
 import requests
 
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -214,7 +213,8 @@ class PasswordManagerProClient(object):
                 "Details": {"common_name": common_name, "serial_number": serial_number}
             }
         }
-        # Get the raw JSON response and extract the actual password from jres["result"]["message"]
+        # Get the raw JSON response and extract the actual password
+        # from jres["result"]["message"]
         res = self._get("getCertificatePassphrase", pki_api=True, raw=True, jdata=data)
         jres = json.loads(res)
         msg = jres.get("result", {}).get("message", "")
@@ -314,7 +314,7 @@ class PasswordManagerProClient(object):
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#fpssh
     # FIXME This API seems to be broken
     def get_ssh_key(self, name):
-        data = {"operation": {"Details": {"keyName": name}}}
+        # data = {"operation": {"Details": {"keyName": name}}}
         # FIXME The doc states POST ¯\_(ツ)_/¯
         res = self._post("getSSHKey", pki_api=True)
         return res
@@ -322,7 +322,7 @@ class PasswordManagerProClient(object):
     # https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html#exportssh
     # FIXME This API seems to be broken
     def export_ssh_key(self, name):
-        data = {"operation": {"Details": {"keyName": name}}}
+        # data = {"operation": {"Details": {"keyName": name}}}
         # FIXME The doc states POST ¯\_(ツ)_/¯
         res = self._post("exportSSHKey", pki_api=True)
         return res

@@ -1,1 +1,3 @@
-from .pypmp import *
+from .pypmp import PasswordManagerProClient
+
+__all__ = ["PasswordManagerProClient"]
