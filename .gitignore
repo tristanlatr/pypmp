@@ -2,6 +2,9 @@
 # Created by https://www.gitignore.io/api/python
 # Edit at https://www.gitignore.io/?templates=python
 
+## API docs
+apidocs
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/

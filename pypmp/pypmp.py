@@ -341,7 +341,8 @@ class PasswordManagerProClient(object):
         resource = self.get_resource_by_name(resource_name)
         for acc in [
             x
-            for x in self.get_accounts(resource.get("RESOURCE ID")).get("ACCOUNT LIST")
+            # pytype gets an error "No attribute 'get' on None"?
+            for x in self.get_accounts(resource.get("RESOURCE ID")).get("ACCOUNT LIST") # type: ignore[attribute-error]
         ]:
             if acc.get("ACCOUNT NAME") == account_name:
                 return acc
