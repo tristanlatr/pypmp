@@ -32,6 +32,10 @@ pmp.get_account_by_name(resource_name="resource01", account_name="Administrator"
 pmp.get_password(resource_name="resource01", account_name="Administrator")
 ```
 
-## API Documentation
+## ``pypmp.PasswordManagerProClient`` API Documentation
+
+https://post-luxembourg.github.io/pypmp/pypmp.PasswordManagerProClient.html
+
+## Password Manager Pro's REST API Documentation
 
 https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html
