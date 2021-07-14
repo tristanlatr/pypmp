@@ -32,7 +32,7 @@ pmp.get_account_by_name(resource_name="resource01", account_name="Administrator"
 pmp.get_password(resource_name="resource01", account_name="Administrator")
 ```
 
-## ``pypmp.PasswordManagerProClient`` API Documentation
+## ``PasswordManagerProClient`` API Documentation
 
 https://post-luxembourg.github.io/pypmp/pypmp.PasswordManagerProClient.html
 
